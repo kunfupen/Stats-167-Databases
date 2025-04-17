@@ -1,0 +1,113 @@
+---
+title: "Homework 1"
+format: pdf
+editor: visual
+author: Khang Thai
+date: "April 15, 2025"
+---
+
+## Question 1)
+
+### (a)
+
+It might be better to store data in a semi-structured format instead of a structured format when the data is in the form of a JSON or XML data. When the data has some consistent organization but it is not stored in tabular form, it is better to use semi-structured format.
+
+### (b)
+
+When the data is consistent and organized, it is best to use a structure format. Additionally, structured data generally use relational databases like data tables, making it easy for the data to be organized and searchable.
+
+## Question 2)
+
+### (i)
+
+**Unstructured** - PDFs are typically not structured because they store information in a text or image format making it easier to read, but not structurally formatted for data.
+
+### (ii)
+
+**Semi-structured** - The survey questions that were required was structured, but the skipped responses and open-ended feedback were semi-structured.
+
+### (iii)
+
+**Semi-structured** - JSON format follows semi-structured data, in which the data does not follow a database table, but it is somewhat consistent and organized.
+
+### (iv)
+
+**Unstructured** - Audio files are unstructured data and the transcripts are also incomplete, which is also unstructured.
+
+### (v)
+
+**Semi-structured** - The metadata is structured with a organized format, but the images is unstructured, due missing certain aspects like gps and time stamps.
+
+### (vi)
+
+**Structured** - The CSV format is generally structured, but with the comments columns shows a semi-structured format.
+
+### (vii)
+
+**Structured** - Specific variables like price, bedrooms, and square footage are all structured format, while the description of the property and optional features are semi-structured format.
+
+## Question 3)
+
+### (a)
+
+### **Event**
+
+\- **Attributes**
+
+-   EventID (Primary Key)
+
+-   EventName
+
+-   StartDate
+
+-   EndDate
+
+-   Description
+
+### **Location**
+
+\- **Attributes**
+
+-   LocationID (Primary Key)
+
+-   LocationName
+
+-   Address
+
+### **Employee**
+
+\- Attributes
+
+-   EmployeeID (Primary Key)
+
+-   FirstName
+
+-   LastName
+
+-   Postion
+
+### Resident
+
+\- Attributes
+
+-   ResidentID (Primary Key)
+
+-   FirstName
+
+-   LastName
+
+-   Email
+
+### Cardinality
+
+-   Event - Employee: One to many
+
+-   Event - Location: One to many
+
+-   Resident - Event : Many to many
+
+### (b)
+
+![](Screenshot 2025-04-17 153346.png)
+
+https://www.smartdraw.com/entity-relationship-diagram/
