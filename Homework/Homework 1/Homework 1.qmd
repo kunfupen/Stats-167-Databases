@@ -108,6 +108,6 @@ When the data is consistent and organized, it is best to use a structure format.
 
 ### (b)
 
-![](Screenshot 2025-04-17 153346.png)
+![](Screenshot%202025-04-17%20153346.png)
 
 https://www.smartdraw.com/entity-relationship-diagram/
