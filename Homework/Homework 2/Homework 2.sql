@@ -59,7 +59,8 @@ SELECT productVendor, SUM(quantityInStock * (MSRP  - buyPrice)) AS profit,
          AVG(buyPrice) AS avgBuyPrice
 FROM products
 GROUP BY productVendor
-ORDER BY profit DESC;
+ORDER BY profit DESC
+LIMIT 1;
 
 
 -- Question 2
