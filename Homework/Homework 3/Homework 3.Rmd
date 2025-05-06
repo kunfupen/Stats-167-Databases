@@ -1,0 +1,214 @@
+---
+title: "Homework 3"
+author: "Khang Thai"
+date: "2025-05-06"
+output: pdf_document
+---
+
+## Question 1)
+```{r}
+library(RSQLite)
+library(DBI)
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "classic.db")
+
+```
+
+### (a)
+Primary Key: productCode, orderNumber 
+
+Foreign Key: p.productCode, od.orderNumber
+
+### (b)
+```{sql 1b, connection = con}
+SELECT productLine, SUM(quantityOrdered) AS totalQuantityOrdered
+FROM orderdetails
+JOIN products ON orderdetails.productCode = products.productCode
+GROUP BY productLine
+ORDER BY totalQuantityOrdered DESC
+
+```
+Classic Cars has the most quantity ordered
+
+### (c)
+```{sql 1c1, connection = con}
+SELECT orderNumber, SUM(quantityOrdered) AS totalQuantityOrdered
+FROM orderdetails
+GROUP BY orderNumber
+ORDER BY totalQuantityOrdered DESC
+LIMIT 1;
+
+```
+```{sql 1c2, connection = con}
+SELECT od.orderNumber, p.productName, od.quantityOrdered
+FROM orderDetails od
+JOIN products p ON od.productCode = p.productCode
+WHERE od.orderNumber = (
+    SELECT orderNumber
+    FROM orderdetails
+    GROUP BY orderNumber
+    ORDER BY SUM(quantityOrdered) DESC
+    LIMIT 1)
+ORDER BY od.quantityOrdered DESC;
+
+```
+### (d)
+```{sql 1d, connection = con}
+SELECT 
+    COUNT(CASE WHEN od.priceEach < p.MSRP THEN 1 END) AS below_msrp,
+    COUNT(CASE WHEN od.priceEach = p.MSRP THEN 1 END) AS at_msrp,
+    COUNT(CASE WHEN od.priceEach > p.MSRP THEN 1 END) AS above_msrp
+FROM orderDetails od
+JOIN products p ON od.productCode = p.productCode
+
+```
+
+### (e)
+```{sql 1e1, connection = con}
+SELECT COUNT(p.productCode) AS never_purchased
+FROM products p
+LEFT JOIN orderDetails od ON p.productCode = od.productCode
+WHERE od.orderNumber is NULL;
+
+```
+```{sql 1e2, connection = con}
+SELECT p.productCode, p.productName
+FROM products p
+LEFT JOIN orderDetails od ON p.productCode = od.productCode
+WHERE od.orderNumber is NULL;
+
+```
+
+## Question 2)
+
+### (a)
+```{sql 2a1, connection = con}
+SELECT orderNumber, COUNT(DISTINCT productCode) AS distinctProducts
+FROM orderDetails
+GROUP BY orderNumber
+ORDER BY distinctProducts DESC
+LIMIT 1;
+
+```
+
+```{sql 2a2, connection = con}
+SELECT p.productName
+FROM orderDetails od
+JOIN products p ON od.productCode = p.productCode
+WHERE od.orderNumber = (
+  SELECT orderNumber
+  FROM orderDetails
+  GROUP BY orderNumber
+  ORDER BY COUNT(DISTINCT productCode) DESC
+  LIMIT 1
+)
+ORDER BY p.productName;
+```
+
+### (b)
+```{sql 2b, connection = con}
+SELECT c.contactFirstName, c.contactLastName, c.country
+FROM customers c
+JOIN orders o ON c.customerNumber = o.customerNumber
+WHERE o.orderNumber = (
+  SELECT orderNumber
+  FROM orderDetails
+  GROUP BY orderNumber
+  ORDER BY COUNT(DISTINCT productCode) DESC
+  LIMIT 1
+);
+
+```
+
+### (c)
+```{sql 2c, connection = con}
+SELECT c.customerName, c.contactFirstName, c.contactLastName, o.orderNumber, 
+SUM(od.quantityOrdered * od.priceEach) AS total
+FROM customers c
+JOIN orders o ON c.customerNumber = o.customerNumber
+JOIN orderDetails od ON o.orderNumber = od.orderNumber
+GROUP BY o.orderNumber, c.customerNumber, c.customerName, c.contactFirstName, c.contactLastName
+ORDER BY total DESC
+LIMIT 1;
+
+```
+
+### (d)
+```{sql 2d1, connection = con}
+SELECT p.productName, SUM(od.quantityOrdered) AS totalQuantity
+FROM products p
+JOIN orderDetails od ON p.productCode = od.productCode
+JOIN orders o ON od.orderNumber = o.orderNumber
+JOIN customers c ON o.customerNumber = c.customerNumber
+WHERE c.country = 'USA'
+GROUP BY p.productCode, p.productName
+ORDER BY totalQuantity DESC
+LIMIT 1;
+
+```
+```{sql 2d2, connection = con}
+SELECT p.productName, SUM(od.quantityOrdered) AS totalQuantity
+FROM products p
+JOIN orderDetails od ON p.productCode = od.productCode
+JOIN orders o ON od.orderNumber = o.orderNumber
+JOIN customers c ON o.customerNumber = c.customerNumber
+WHERE c.country = 'Germany'
+GROUP BY p.productCode, p.productName
+ORDER BY totalQuantity DESC
+LIMIT 1; 
+
+```
+
+## Question 3)
+
+### (a)
+Left join is intended to return all orders that is related to the customers information
+Inner join is intended to return only orders that have matching customers
+Right join is intended to return all customers that is related to the order information
+
+### (b)
+```{sql 3b, connection = con}
+SELECT COUNT(*) AS orderCount
+FROM orders o
+JOIN customers c ON o.customerNumber = c.customerNumber
+WHERE c.contactFirstName = 'Susan'
+AND c.contactLastName = 'Nelson'
+
+```
+
+### (c)
+```{sql 3c, connection = con}
+SELECT COUNT(od.quantityOrdered) AS totalQauntityOrdered
+FROM customers c
+JOIN orders o ON c.customerNumber = o.customerNumber
+JOIN orderDetails od ON o.orderNumber = od.orderNumber
+WHERE c.contactFirstName = 'Susan'
+AND c.contactLastName = 'Nelson'
+
+```
+
+
+## Question 4)
+```{sql 4, connection = con}
+SELECT salesRepEmployeeNumber, COUNT(DISTINCT customerNumber) AS totalCustomers,
+SUM(totalSpending) AS totalCustomerSpending
+FROM (
+  SELECT c.salesRepEmployeeNumber, c.customerNumber, 
+  SUM(od.quantityOrdered * od.priceEach) AS totalSpending
+  FROM orderDetails od
+  JOIN orders o ON od.orderNumber = o.orderNumber
+  JOIN customers c ON o.customerNumber = c.customerNumber
+  WHERE c.salesRepEmployeeNumber IS NOT NULL
+  GROUP BY c.salesRepEmployeeNumber, c.customerNumber
+) AS customerSpending
+GROUP BY salesRepEmployeeNumber
+ORDER BY totalCustomerSpending DESC;
+
+```
+
+
+
+
+
+
+
+
