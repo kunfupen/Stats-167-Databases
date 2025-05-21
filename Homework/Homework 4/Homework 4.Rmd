@@ -1,0 +1,284 @@
+---
+title: "Homework 4"
+author: "Khang Thai"
+date: "2025-05-18"
+output: pdf_document
+---
+
+```{r}
+library(RMariaDB)
+library(DBI)
+con <- dbConnect(RMariaDB::MariaDB(),
+host = "relational.fel.cvut.cz",
+port = 3306,
+username = "guest",
+password = "ctu-relational",
+dbname = "imdb_ijs"
+)
+```
+
+
+## Question 1)
+
+### (a)
+```{r}
+dbGetQuery(con, "
+  SELECT name, year
+  FROM movies
+  WHERE year = (SELECT MIN(year) FROM movies);
+")
+
+```
+
+### (b)
+```{r}
+dbGetQuery(con, "
+  SELECT name, year, rank
+  FROM movies
+  WHERE year = (SELECT MAX(year) 
+                FROM movies
+                WHERE rank IS NOT NULL)
+  ORDER BY rank DESC
+  LIMIT 10;
+")
+
+```
+
+### (c)
+```{r}
+genre_rating <- dbGetQuery(con, "
+  SELECT genre, COUNT(*) AS num_movies, AVG(rank) AS avg_rating
+  FROM movies_genres
+  JOIN movies ON movie_id = id
+  WHERE rank IS NOT NULL
+  GROUP BY genre
+  ORDER BY avg_rating DESC
+") 
+genre_rating
+
+```
+
+### (d)
+```{r}
+library(ggplot2)
+ggplot(genre_rating, aes(x = avg_rating)) + 
+  geom_histogram(binwidth = 0.2, fill = "skyblue", color = "white") + 
+  theme_minimal()
+
+```
+
+## Question 2)
+```{r}
+library(dplyr)
+
+director_tbl <- tbl(con, "directors")
+movies_directors_tbl <- tbl(con, "movies_directors")
+
+result <- movies_directors_tbl %>%
+  inner_join(director_tbl, by = c("director_id" = "id")) %>%
+  group_by(director_id, first_name, last_name) %>%
+  summarise(movie_count = n()) %>%
+  arrange(desc(movie_count)) %>%
+  head(10)
+
+show_query(result)
+collect(result)
+```
+
+## Question 3)
+```{r, eval= FALSE}
+library(reticulate)
+virtualenv_install("stats167_venv", packages = "pymysql")
+use_virtualenv("stats167_venv")
+```
+
+### (a)
+```{python}
+import pymysql
+
+con = pymysql.connect(
+  host = "relational.fel.cvut.cz",
+  port = 3306,
+  user = "guest",
+  password = "ctu-relational",
+  database = "imdb_ijs"
+)
+
+with con.cursor() as cur:
+    query = """
+        SELECT role, COUNT(DISTINCT roles.actor_id) AS num_actresses
+        FROM roles
+        JOIN actors ON roles.actor_id = actors.id
+        WHERE actors.gender = 'F' AND role IS NOT NULL
+        GROUP BY role
+        ORDER BY num_actresses
+        LIMIT 20;
+    """
+    cur.execute(query)
+    results = cur.fetchall()
+    
+for row in results:
+    print(row)
+```
+
+### (b)
+```{python}
+con = pymysql.connect(
+  host = "relational.fel.cvut.cz",
+  port = 3306,
+  user = "guest",
+  password = "ctu-relational",
+  database = "imdb_ijs"
+)
+
+with con.cursor() as cur:
+    query = """
+        SELECT actors.first_name, actors.last_name, sub.role_count,
+        RANK() OVER(
+          ORDER BY sub.role_count DESC) AS rank
+        FROM (
+          SELECT actor_id, COUNT(*) AS role_count
+          FROM roles
+          WHERE role LIKE '%Gamgee%'
+          GROUP BY actor_id
+        ) AS sub
+        JOIN actors ON sub.actor_id = actors.id;
+        
+    """
+    cur.execute(query)
+    results = cur.fetchall()
+    
+for row in results:
+    print(row)
+```
+
+## Question 4)
+
+### (a)
+```{python}
+import pymysql
+
+con = pymysql.connect(
+  host = "relational.fel.cvut.cz",
+  port = 3306,
+  user = "guest",
+  password = "ctu-relational",
+  database = "imdb_ijs"
+)
+
+with con.cursor() as cur:
+    query = """
+        WITH director_stats AS (
+          SELECT
+            md.director_id,
+            AVG(m.rank) AS average_rating,
+            COUNT(*) AS movie_count
+          FROM movies m
+          JOIN movies_directors md ON m.id = md.movie_id
+          WHERE m.rank IS NOT NULL
+          GROUP BY md.director_id
+          HAVING COUNT(*) >= 5
+        ), ranked_movies AS(
+          SELECT
+            d.first_name,
+            d.last_name,
+            m.name AS movie_title,
+            m.rank AS movie_rating,
+            ds.average_rating,
+            RANK() OVER (PARTITION BY d.id 
+            ORDER BY m.rank DESC) AS rank
+          FROM director_stats ds
+          JOIN directors d ON d.id = ds.director_id
+          JOIN movies_directors md ON d.id = md.director_id           
+          JOIN movies m ON m.id = md.movie_id
+          WHERE m.rank IS NOT NULL
+        )
+        SELECT *
+        FROM ranked_movies
+        WHERE rank <= 3
+        ORDER BY last_name, movie_rating DESC
+        LIMIT 20;
+        
+    """
+    cur.execute(query)
+    results = cur.fetchall()
+    
+for row in results:
+    print(row)
+
+```
+
+### (b)
+```{python}
+con = pymysql.connect(
+  host = "relational.fel.cvut.cz",
+  port = 3306,
+  user = "guest",
+  password = "ctu-relational",
+  database = "imdb_ijs"
+)
+
+with con.cursor() as cur:
+    query = """
+        WITH director_stats AS (
+          SELECT
+            md.director_id,
+            FLOOR(m.year / 10) * 10 AS decade,
+            COUNT(*) AS movie_count
+          FROM movies m
+          JOIN movies_directors md ON m.id = md.movie_id
+          WHERE m.year >= 1950
+          GROUP BY md.director_id, decade
+        ), max_count AS (
+          SELECT
+            decade,
+            MAX(movie_count) AS max_count
+          FROM director_stats
+          GROUP BY decade
+        ), top_directors AS (
+          SELECT
+            ds.director_id,
+            ds.decade,
+            ds.movie_count
+          FROM director_stats ds
+          JOIN max_count mc ON ds.decade = mc.decade AND ds.movie_count = mc.max_count
+        )
+        SELECT 
+          d.first_name,
+          d.last_name,
+          td.decade,
+          td.movie_count
+        FROM top_directors td
+        JOIN directors d ON d.id = td.director_id
+        ORDER BY td.decade, d.last_name;
+    
+    """
+    cur.execute(query)
+    results = cur.fetchall()
+    
+for row in results:
+    print(row)
+```
+
+## Question 5)
+```{sql, eval = FALSE}
+SELECT movie_id,
+  year, 
+  SUM(views) AS cumulative_views
+FROM (
+  SELECT
+  m1.movie_id,
+  m1.year,
+  (
+    SELECT SUM(m2.views)
+    FROM m2.movie_id = m1.movie_id
+      AND m2.year BETWEEN m1.year - 2 AND m2.year
+  ) AS views
+  FROM movie_views m1
+  WHERE m1.year < (SELECT MAX(year) FROM movie_views)
+) AS subquery
+ORDER BY movie_id, year;
+
+```
+
+
