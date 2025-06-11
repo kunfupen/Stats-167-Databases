@@ -1,0 +1,129 @@
+---
+title: "Stats 167 Final Project"
+author: "Khang Thai"
+date: "2025-05-28"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Option 1: Practice SQL Interview Questions
+
+## Question 1)
+
+```{sql, eval = FALSE}
+SELECT product_id, sale_data, amount,
+  SUM(amount) OVER (PARTITION BY product_id ORDER BY sale_date) AS sales_overtime
+FROM sales;
+
+```
+
+**Logic**
+
+-   We want to use all three columns because we are looking for the total amount of sales from each product id over the sale date.
+-   SUM(amount) is taking the total amount in the amount column
+-   OVER makes it a window function meaning that we creating a group of rows to perform the SUM.
+-   PARTITION BY essentially just divides the rows into multiple groups and in this case was want to partition by the product_id and then order the rows in each partition.
+
+## Question 2)
+
+```{sql, eval = FALSE}
+WITH revenue_per_product AS(
+  SELECT products.id,
+    products.name, 
+    products.category, 
+    SUM(order_items.quantity * order_items.price) AS revenue 
+  FROM order_items
+  JOIN products ON order_items.product_id = products.id
+  GROUP BY products.id, products.name, products.category
+),
+ranked_products AS (
+  SELECT name,
+    category, 
+    revenue,
+  RANK() OVER (PARTITION BY category ORDER BY revenue DESC)  AS revenue_per_product
+  FROM revenue_per_product
+)
+SELECT name, category, revenue
+FROM ranked_products
+WHERE revenue_per_prouct <= 2
+
+```
+
+**Logic**
+
+-   We join the products table with the order_items table to have access to both tables
+-   We want to group by products to calculate total revenue
+-   Using a window function will help rank the products within each category.
+-   Filter to get only the two 2 products per category
+
+
+## Question 3)
+
+```{sql, eval = FALSE}
+SELECT orders.customer_id, COUNT(DISTINCT order_items.product_id)
+FROM order_items
+JOIN orders ON order_items.order_id = orders.id
+GROUP BY orders.customer_id
+HAVING COUNT(DISTINCT order_items.product_id) = 1
+
+
+```
+
+**Logic**
+
+-   We join the order_items table to link each customer to the products they ordered.
+-   We the group by the customer_id to have each custmer's order history.
+-   COUNT will get the total number of distinct products each customer orered.
+-   Filtering the total number of distinct products to one will help identify all the unique products.
+
+
+## Question 4)
+
+```{sql, eval = FALSE}
+WITH previous_race AS (
+  SELECT runner_id, race_number, finish_time,
+  LAG(finish_time) OVER (PARTITION BY runner_id ORDER BY race_number) AS previous_finish_time
+  FROM marathon_times
+)
+SELECT runner_id
+FROM marathon_times
+WHERE runner_id NOT IN (
+  SELECT runner_id
+  FROM previous_race
+  WHERE previous_finish_time IS NOT NULL
+    AND finish_time >= previous_finish_time
+)
+
+
+```
+
+**Logic**
+
+-   We want to find the runners whose finish times decreases in every race they ran
+-   Use LAG() as the window function to compare each race's finish time to the previous one for the same funner.
+-   We want to then identify runners who ever had a non-decreasing time and exclude those from the final result.
+-   Return the remaining runner_id who only improved or only ran once.
+
+
+
+## Question 5)
+
+```{sql, eval = FALSE}
+SELECT user_id, login_date
+FROM user_logins
+WHERE login_date 
+
+```
+
+**Logic**
+
+-   
+
+
+
+
+
+
